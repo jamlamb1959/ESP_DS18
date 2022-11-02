@@ -13,7 +13,7 @@ all: mkdir push
 # all: mkdir push upload monitor
 
 mkdir:
-	mkRemoteDirs ${DEST} $(BNAME) ${PROJ} ${BOARDS}
+	~/usr/local/bin/mkRemoteDirs ${DEST} $(BNAME) ${PROJ} ${BOARDS}
 
 push:
 	echo "PROJ: ${PROJ}"
