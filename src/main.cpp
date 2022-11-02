@@ -631,11 +631,8 @@ static void _reconnect(
             {
             Serial.println( "\rConnected.\r" );
 
-            _log( "\n" PROGNAME ":\n"
-                    "TIMESTAMP: " __TIMESTAMP__ "\n"
-                    "mac: %s\n"
-                    "ssid: %s\n"
-                    , mac_g, ssid_g );
+            _log( "{\"MAC\":\"%s\",\"PROG\":\"%s\",\"COMPILE\":\"%s\",\"SSID\":\"%s\"}",
+                    mac_g, PROG, __TIMESTAMP__, ssid_g );
 
             ps_g.subscribe( "/MANAGE", 0 );
             }
@@ -802,7 +799,7 @@ void setup(
 
     strcpy( mac_g, WiFi.macAddress().c_str() );
 
-    strcpy( logTopic_g, "/LOGESP/" );
+    strcpy( logTopic_g, "/BOOT/" );
     strcat( logTopic_g, mac_g );
 
     if ( WiFi.status() == WL_CONNECTED )
