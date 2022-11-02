@@ -1,2 +1,5 @@
-# ESP8266_DS18
-Use a d1_mini to read a DS18B20
+# ESP_DS18
+
+This is an attempt to build for multiple platforms with a single source base.
+The platformio.ini refers to several platforms and when pio run is executed
+it will attemp to build all of them.

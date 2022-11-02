@@ -8,7 +8,7 @@
 #define ID "Heltec"
 // #define USE_ESPNOW
 #define USE_OTA
-// #define USE_PUBSUB
+#define USE_PUBSUB
 #define USE_WIFI
 #define USE_DS18
 #define USE_MESH
@@ -18,7 +18,7 @@
 #define ID "ESP32"
 // #define USE_ESPNOW
 #define USE_OTA
-// #define USE_PUBSUB
+#define USE_PUBSUB
 #define USE_WIFI
 #define USE_DS18
 #define SLEEPTIME   300
@@ -68,17 +68,26 @@ std::list< uint32_t > gwAddr_g;
 #define LED_BUILTIN     2
 #define D1 17
 #define D2 21
-#define PROG        "firmware/esp32dev/ESP_DS18/firmware"
+#define PROG        "firmware/main/esp32dev/ESP_DS18/firmware"
 #else
 /*
 ** Heltec
 */
-#define PROG        "firmware/heltec_wifi_lora_32_V2/ESP_DS18/firmware"
+#define PROG        "firmware/main/heltec_wifi_lora_32_V2/ESP_DS18/firmware"
 #define D1 13
 #define D2 12
 #endif
 
 #endif
+
+typedef struct
+{
+  const char * ssid;
+  const char * passwd;
+  const char * updateAddr;
+} WiFiInfo;
+
+static WiFiInfo * wifi_g = NULL;
 
 #define ARDUINOJSON_ENABLE_STD_STRING 1
 
@@ -121,7 +130,7 @@ static uint8_t broadcast_g[ 6 ] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 #ifdef ESP32
 #define PROGNAME    "ESP_DS18"
 #else
-#define PROG        "d1_mini/ESP_DS18"
+#define PROG        "main/d1_mini/ESP_DS18"
 #define PROGNAME    "ESP8266_DS18"
 #endif
 #define RESTARTINV  3600
@@ -267,8 +276,12 @@ static void _setupMesh(
 #else
     WiFi.disconnect( false );
 #endif
+#ifdef USE_WIFI
+    wifi_g = NULL;
+#endif
 
-    mesh.setDebugMsgTypes( COMMUNICATION | CONNECTION | ERROR | MESH_STATUS );
+    // mesh.setDebugMsgTypes( COMMUNICATION | CONNECTION | ERROR | MESH_STATUS );
+    mesh.setDebugMsgTypes( ERROR );
 
     mesh.init( MESH_SSID, MESH_PASSWORD, &userScheduler, MESH_PORT, WIFI_STA, 6 );
 
@@ -309,13 +322,6 @@ static DallasTemperature dt_g( &ds );
 #endif
 
 
-typedef struct
-{
-  const char * ssid;
-  const char * passwd;
-  const char * updateAddr;
-} WiFiInfo;
-
 WiFiInfo wifiInfo_g[] =
 {
   { "s1616", "4026892842", "pharmdata.ddns.net" },
@@ -325,7 +331,6 @@ WiFiInfo wifiInfo_g[] =
   { NULL }
 };
 
-static WiFiInfo * wifi_g = NULL;
 
 #ifdef USE_OTA
 #ifdef ESP32
@@ -456,7 +461,7 @@ static void _log(
 
 #ifdef USE_PUBSUB
 #ifdef USE_WIFI
-    if ( ps_g.connected() )
+    if ( (wifi_g != NULL) && (ps_g.connected()) )
         {
         ps_g.publish( logTopic_g, buf );
         }
@@ -470,6 +475,11 @@ static void _waitMQTT(
         )
     {
 #ifdef USE_WIFI
+    if ( wifi_g == NULL )
+        {
+        return;
+        }
+
     unsigned long et = millis() + (aSeconds * 1000);
 
     while( millis() < et )
@@ -598,17 +608,21 @@ static void _reconnect(
 
     String clientId;
 
-    clientId = "MQTT-";
+    clientId = "C-";
     clientId += mac_g;
     clientId += '-';
     clientId += String( attempt ++ );
 
-    if ( ps_g.connected() || (wifi_g == NULL) )
+    if ( wifi_g == NULL )
         {
         return;
         }
 
-    Serial.printf( "%s, Attempt connect.\n", clientId.c_str() );
+    if ( ps_g.connected() )
+        {
+        return;
+        }
+
     delay( 1000 );
 
     for( retries = 0; (retries < 10) && (!ps_g.connected()); retries ++ )
@@ -929,9 +943,8 @@ void loop(
 #ifdef USE_MESH
         if ( gwAddr_g.size() == 0 )
             {
-            mesh.sendBroadcast( String( buf ) );
             mesh.sendBroadcast( String( "GW" ) );
-            Serial.printf( "(%d)sendBroadcast - %s\n", __LINE__, buf );
+            Serial.printf( "(%d)send GW(Broadcast)\n", buf );
             }
         else
             {
